@@ -259,7 +259,7 @@ export default function Dashboard() {
             bottom: 30,
             left: 20,
             right: 20,
-            backgroundColor: "#22C55E",
+            backgroundColor: "#git 22C55E",
             padding: 16,
             borderRadius: 14,
           }}
