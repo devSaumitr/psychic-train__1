@@ -1,29 +1,37 @@
-import React, { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import {
+  Dimensions,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
-  ScrollView,
+  TextInput, // ✅ ADDED (search)
 } from "react-native";
 
 import Animated, {
   FadeIn,
   FadeInDown,
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
 
 import { LineChart, PieChart } from "react-native-chart-kit";
+import { translations } from "../../constants/languages";
 import { calculatePremiumAPI } from "../../services/api";
 import { useLanguage } from "../../state/language";
-import { translations } from "../../constants/languages";
 
-export default function Dashboard() {
+export default function Dashboard({ navigation }) {
   const [premium, setPremium] = useState(38);
   const [claim, setClaim] = useState(null);
+
+  // ✅ ADDED: recent claims (SAFE ADD)
+  const [recentClaims, setRecentClaims] = useState([]);
+
+  // ✅ ADDED: search state (SAFE ADD)
+  const [search, setSearch] = useState("");
 
   const { language } = useLanguage();
   const screenWidth = Dimensions.get("window").width;
@@ -57,16 +65,36 @@ export default function Dashboard() {
   };
 
   const simulateEvent = () => {
-    setClaim({
+    const newClaim = {
       event: t.disruption,
       payout: 500,
-    });
+      time: new Date(),
+    };
+
+    setClaim(newClaim);
+
+    // ✅ ADDED: recent claims tracking
+    setRecentClaims((prev) => [newClaim, ...prev].slice(0, 5)); // increased to 5
   };
 
   useEffect(() => {
     const interval = setInterval(simulateEvent, 10000);
     return () => clearInterval(interval);
   }, [language]);
+
+  // ✅ ADDED: clean date formatter
+  const formatDate = (date) => {
+    try {
+      return new Date(date).toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "";
+    }
+  };
 
   return (
     <ScrollView
@@ -92,6 +120,35 @@ export default function Dashboard() {
             {t.subtitle}
           </Text>
         </Animated.View>
+
+        {/* ✅ ADDED: SEARCH BAR (aligned right style) */}
+        <View style={{
+          flexDirection: "row",
+          justifyContent: "flex-end",
+          marginTop: 16
+        }}>
+          <View style={{
+            flexDirection: "row",
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderRadius: 14,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            width: "70%"
+          }}>
+            <TextInput
+              placeholder="Search claims..."
+              placeholderTextColor="#64748B"
+              value={search}
+              onChangeText={setSearch}
+              style={{
+                color: "#fff",
+                flex: 1
+              }}
+            />
+          </View>
+        </View>
 
         {/* HERO */}
         <Animated.View
@@ -119,6 +176,12 @@ export default function Dashboard() {
           }}>
             ₹{claim ? claim.payout : 0}
           </Text>
+
+          {claim && (
+            <Text style={{ color: "#64748B", marginTop: 4 }}>
+              {formatDate(claim.time)} {/* ✅ FIXED */}
+            </Text>
+          )}
 
           <Text style={{ color: "#22C55E", marginTop: 6 }}>
             ● {t.live}
@@ -162,6 +225,68 @@ export default function Dashboard() {
           </View>
         </View>
 
+        {/* ✅ IMPROVED: Recent Claims */}
+        <Text style={{
+          color: "#94A3B8",
+          marginTop: 26,
+          marginBottom: 8,
+          fontWeight: "600"
+        }}>
+          Recent Claims
+        </Text>
+
+        {recentClaims
+          .filter(c => c.event.toLowerCase().includes(search.toLowerCase()))
+          .map((c, index) => (
+          <Animated.View
+            key={index}
+            entering={FadeInDown.delay(200 + index * 100)}
+            style={{
+              backgroundColor: "rgba(255,255,255,0.04)",
+              padding: 14,
+              borderRadius: 14,
+              marginBottom: 10,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.08)",
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}
+          >
+            <View>
+              <Text style={{ color: "#fff", fontWeight: "600" }}>
+                {c.event}
+              </Text>
+
+              <Text style={{ color: "#64748B", fontSize: 12 }}>
+                {formatDate(c.time)}
+              </Text>
+            </View>
+
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={{ color: "#22C55E", fontWeight: "700" }}>
+                ₹{c.payout}
+              </Text>
+
+              {/* ✅ ADDED: small badge */}
+              <View style={{
+                marginTop: 4,
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 8,
+                backgroundColor: "rgba(34,197,94,0.1)"
+              }}>
+                <Text style={{
+                  color: "#22C55E",
+                  fontSize: 10
+                }}>
+                  SUCCESS
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+        ))}
+
         {/* BUTTON */}
         <Animated.View style={buttonStyle}>
           <TouchableOpacity
@@ -179,41 +304,33 @@ export default function Dashboard() {
               shadowRadius: 12,
             }}
           >
-            <Text style={{
-              color: "#fff",
-              fontWeight: "700"
-            }}>
+            <Text style={{ color: "#fff", fontWeight: "700" }}>
               {t.update}
             </Text>
           </TouchableOpacity>
         </Animated.View>
-        {/* 👉 ADD BELOW THIS LINE (SECOND BUTTON) */}
 
-<Animated.View style={buttonStyle}>
-  <TouchableOpacity
-    onPressIn={() => (buttonScale.value = withTiming(0.96))}
-    onPressOut={() => (buttonScale.value = withTiming(1))}
-    onPress={simulateEvent}
-    style={{
-      marginTop: 12,
-      paddingVertical: 16,
-      borderRadius: 20,
-      alignItems: "center",
-
-      // Premium secondary style
-      backgroundColor: "rgba(255,255,255,0.04)",
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.1)",
-    }}
-  >
-    <Text style={{
-      color: "#94A3B8",
-      fontWeight: "600"
-    }}>
-      {t.trigger}
-    </Text>
-  </TouchableOpacity>
-</Animated.View>
+        {/* SECOND BUTTON */}
+        <Animated.View style={buttonStyle}>
+          <TouchableOpacity
+            onPressIn={() => (buttonScale.value = withTiming(0.96))}
+            onPressOut={() => (buttonScale.value = withTiming(1))}
+            onPress={simulateEvent}
+            style={{
+              marginTop: 12,
+              paddingVertical: 16,
+              borderRadius: 20,
+              alignItems: "center",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.1)",
+            }}
+          >
+            <Text style={{ color: "#94A3B8", fontWeight: "600" }}>
+              {t.trigger}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* ANALYTICS */}
         <Text style={{
@@ -289,7 +406,97 @@ export default function Dashboard() {
             />
           </View>
         </Animated.View>
+{/* ================= NAVIGATION ACTIONS ================= */}
 
+{/* BUY POLICY */}
+<TouchableOpacity
+  onPress={() => navigation.navigate("Policies")}
+  style={{
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    backgroundColor: "#6366F1",
+  }}
+>
+  <Text style={{ color: "#fff", fontWeight: "600" }}>
+    Buy Policy
+  </Text>
+</TouchableOpacity>
+
+{/* VIEW POLICIES */}
+<TouchableOpacity
+  onPress={() => navigation.navigate("PoliciesList")}
+  style={{
+    marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  }}
+>
+  <Text style={{ color: "#94A3B8" }}>
+    View Policies
+  </Text>
+</TouchableOpacity>
+
+{/* CLAIMS */}
+<TouchableOpacity
+  onPress={() => navigation.navigate("Claims")}
+  style={{
+    marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    backgroundColor: "rgba(99,102,241,0.15)",
+  }}
+>
+  <Text style={{ color: "#6366F1", fontWeight: "600" }}>
+    View Claims
+  </Text>
+</TouchableOpacity>
+
+{/* WORKERS */}
+<TouchableOpacity
+  onPress={() => navigation.navigate("Workers")}
+  style={{
+    marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  }}
+>
+  <Text style={{ color: "#94A3B8" }}>
+    View Workers
+  </Text>
+</TouchableOpacity><TouchableOpacity
+  onPress={() => navigation.navigate("Payouts")}
+  style={{
+    marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  }}
+>
+  <Text style={{ color: "#94A3B8" }}>
+    View Payouts
+  </Text>
+</TouchableOpacity><TouchableOpacity
+  onPress={() => navigation.replace("Login")}
+  style={{
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    backgroundColor: "#EF4444",
+  }}
+>
+  <Text style={{ color: "#fff", fontWeight: "600" }}>
+    Logout
+  </Text>
+</TouchableOpacity>
       </Animated.View>
     </ScrollView>
   );
