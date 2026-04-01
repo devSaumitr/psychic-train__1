@@ -1,3 +1,12 @@
+import React, { useState, useEffect } from "react";
+import {
+  Text,
+  TouchableOpacity,
+  View,
+  Dimensions,
+  ScrollView,
+} from "react-native";
+
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -7,273 +16,281 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { useState, useEffect } from "react";
-import { Text, TouchableOpacity } from "react-native";
+import { LineChart, PieChart } from "react-native-chart-kit";
 import { calculatePremiumAPI } from "../../services/api";
+import { useLanguage } from "../../state/language";
+import { translations } from "../../constants/languages";
 
 export default function Dashboard() {
   const [premium, setPremium] = useState(38);
   const [claim, setClaim] = useState(null);
 
-  // 🔥 PULSE ANIMATION
+  const { language } = useLanguage();
+  const screenWidth = Dimensions.get("window").width;
+
+  const t = translations[language] || translations.en;
+
+  /* ================= ANIMATION ================= */
   const pulse = useSharedValue(1);
+  const buttonScale = useSharedValue(1);
 
   useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1.05, { duration: 1000 }),
-      -1,
-      true
-    );
+    pulse.value = withRepeat(withTiming(1.02, { duration: 2000 }), -1, true);
   }, []);
 
   const animatedPulse = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
   }));
 
+  const buttonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: buttonScale.value }],
+  }));
+
+  /* ================= LOGIC ================= */
   const calculatePremium = async () => {
-    const res = await calculatePremiumAPI();
-    setPremium(res.premium);
+    try {
+      const res = await calculatePremiumAPI();
+      if (res?.premium) setPremium(res.premium);
+    } catch (e) {
+      console.log(e);
+    }
   };
 
   const simulateEvent = () => {
     setClaim({
-      event: "Heavy Rain",
+      event: t.disruption,
       payout: 500,
     });
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      simulateEvent();
-    }, 10000);
+    const interval = setInterval(simulateEvent, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [language]);
 
   return (
-    <Animated.View
-      entering={FadeIn.duration(800)}
-      style={{
-        flex: 1,
-        backgroundColor: "#020617",
-        padding: 18,
-      }}
+    <ScrollView
+      style={{ flex: 1, backgroundColor: "#020617" }}
+      showsVerticalScrollIndicator={false}
     >
+      <Animated.View entering={FadeIn.duration(800)} style={{ padding: 20 }}>
 
-      {/* HEADER */}
-      <Text style={{
-        fontSize: 30,
-        fontWeight: "bold",
-        color: "#fff"
-      }}>
-        ⚡ Forward Shield
-      </Text>
+        {/* HEADER */}
+        <Animated.View entering={FadeInDown.delay(100)}>
+          <Text style={{
+            fontSize: 30,
+            fontWeight: "700",
+            color: "#E2E8F0"
+          }}>
+            🛡️ {t.title}
+          </Text>
 
-      <Text style={{
-        color: "#94A3B8",
-        marginBottom: 18
-      }}>
-        AI-powered income protection
-      </Text>
-
-      {/* HERO CARD (GLASS + GLOW) */}
-      <Animated.View
-        entering={FadeInDown.delay(100).springify()}
-        style={[
-          {
-            backgroundColor: "rgba(255,255,255,0.05)",
-            padding: 22,
-            borderRadius: 22,
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.1)",
-          },
-          animatedPulse
-        ]}
-      >
-        <Text style={{ color: "#94A3B8" }}>
-          Protected Earnings
-        </Text>
-
-        <Text style={{
-          color: "#fff",
-          fontSize: 36,
-          fontWeight: "bold",
-          marginTop: 6
-        }}>
-          ₹{claim ? claim.payout : 0}
-        </Text>
-
-        <Text style={{
-          color: "#22C55E",
-          marginTop: 6
-        }}>
-          ● LIVE PROTECTION ACTIVE
-        </Text>
-      </Animated.View>
-
-      {/* STATUS */}
-      <Text style={{
-        marginBottom: 12,
-        color: "#64748B"
-      }}>
-        ⚡ Real-time monitoring active
-      </Text>
-
-      {/* RISK CARD */}
-      <Animated.View
-        entering={FadeInDown.delay(200).springify()}
-        style={{
-          backgroundColor: "rgba(255,255,255,0.05)",
-          padding: 16,
-          borderRadius: 18,
-          marginBottom: 14,
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.08)"
-        }}
-      >
-        <Text style={{ color: "#E2E8F0" }}>
-          📡 Risk Engine
-        </Text>
-
-        <Text style={{
-          color: "#EF4444",
-          marginTop: 6,
-          fontWeight: "600"
-        }}>
-          Heavy Rain Disruption Detected
-        </Text>
-      </Animated.View>
-
-      {/* PREMIUM CARD */}
-      <Animated.View
-        entering={FadeInDown.delay(300).springify()}
-        style={{
-          backgroundColor: "rgba(255,255,255,0.05)",
-          padding: 16,
-          borderRadius: 18,
-          marginBottom: 14,
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.08)"
-        }}
-      >
-        <Text style={{ color: "#E2E8F0" }}>
-          💰 Smart Premium
-        </Text>
-
-        <Text style={{
-          fontSize: 30,
-          fontWeight: "bold",
-          marginVertical: 10,
-          color: "#fff"
-        }}>
-          ₹{premium}
-        </Text>
-
-        {/* PRIMARY BUTTON */}
-        <TouchableOpacity
-          onPress={calculatePremium}
-          style={{
-            backgroundColor: "#6366F1",
-            padding: 14,
-            borderRadius: 14,
+          <Text style={{
+            color: "#94A3B8",
             marginTop: 6
-          }}
-        >
-          <Text style={{
-            color: "#fff",
-            textAlign: "center",
-            fontWeight: "bold"
           }}>
-            UPDATE AI PREMIUM
-          </Text>
-        </TouchableOpacity>
-
-        {/* SECONDARY BUTTON */}
-        <TouchableOpacity
-          onPress={simulateEvent}
-          style={{
-            backgroundColor: "#0F172A",
-            padding: 14,
-            borderRadius: 14,
-            marginTop: 10
-          }}
-        >
-          <Text style={{
-            textAlign: "center",
-            fontWeight: "600",
-            color: "#94A3B8"
-          }}>
-            TRIGGER EVENT
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* CLAIM CARD */}
-      <Animated.View
-        entering={FadeInDown.delay(400).springify()}
-        style={{
-          backgroundColor: "rgba(255,255,255,0.05)",
-          padding: 16,
-          borderRadius: 18,
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.08)"
-        }}
-      >
-        <Text style={{ color: "#E2E8F0" }}>
-          💸 Instant Payout
-        </Text>
-
-        {claim ? (
-          <>
-            <Text style={{
-              marginTop: 8,
-              color: "#94A3B8"
-            }}>
-              Trigger: {claim.event}
-            </Text>
-
-            <Text style={{
-              color: "#22C55E",
-              marginTop: 6,
-              fontWeight: "bold"
-            }}>
-              ₹{claim.payout} credited instantly ⚡
-            </Text>
-          </>
-        ) : (
-          <Text style={{
-            marginTop: 8,
-            color: "#64748B"
-          }}>
-            Awaiting disruption trigger...
-          </Text>
-        )}
-      </Animated.View>
-
-      {/* 🔥 POPUP */}
-      {claim && (
-        <Animated.View
-          entering={FadeInDown.springify()}
-          style={{
-            position: "absolute",
-            bottom: 30,
-            left: 20,
-            right: 20,
-            backgroundColor: "#git 22C55E",
-            padding: 16,
-            borderRadius: 14,
-          }}
-        >
-          <Text style={{
-            color: "#000",
-            textAlign: "center",
-            fontWeight: "bold"
-          }}>
-            💸 ₹{claim.payout} credited instantly!
+            {t.subtitle}
           </Text>
         </Animated.View>
-      )}
 
-    </Animated.View>
+        {/* HERO */}
+        <Animated.View
+          entering={FadeInDown.delay(140)}
+          style={[{
+            backgroundColor: "rgba(99,102,241,0.08)",
+            borderRadius: 24,
+            padding: 24,
+            marginTop: 22,
+            borderWidth: 1,
+            borderColor: "rgba(99,102,241,0.25)",
+            shadowColor: "#6366F1",
+            shadowOpacity: 0.3,
+            shadowRadius: 20,
+          }, animatedPulse]}
+        >
+          <Text style={{ color: "#94A3B8" }}>
+            {t.protected}
+          </Text>
+
+          <Text style={{
+            color: "#fff",
+            fontSize: 42,
+            fontWeight: "800"
+          }}>
+            ₹{claim ? claim.payout : 0}
+          </Text>
+
+          <Text style={{ color: "#22C55E", marginTop: 6 }}>
+            ● {t.live}
+          </Text>
+        </Animated.View>
+
+        {/* STATS */}
+        <View style={{ flexDirection: "row", marginTop: 18 }}>
+          <View style={{
+            flex: 1,
+            marginRight: 8,
+            backgroundColor: "rgba(255,255,255,0.04)",
+            padding: 16,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+          }}>
+            <Text style={{ color: "#94A3B8", fontSize: 12 }}>
+              {t.premium}
+            </Text>
+            <Text style={{ color: "#fff", fontWeight: "700" }}>
+              ₹{premium}
+            </Text>
+          </View>
+
+          <View style={{
+            flex: 1,
+            marginLeft: 8,
+            backgroundColor: "rgba(255,255,255,0.04)",
+            padding: 16,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+          }}>
+            <Text style={{ color: "#94A3B8", fontSize: 12 }}>
+              {t.risk}
+            </Text>
+            <Text style={{ color: "#EF4444", fontWeight: "700" }}>
+              HIGH
+            </Text>
+          </View>
+        </View>
+
+        {/* BUTTON */}
+        <Animated.View style={buttonStyle}>
+          <TouchableOpacity
+            onPressIn={() => (buttonScale.value = withTiming(0.95))}
+            onPressOut={() => (buttonScale.value = withTiming(1))}
+            onPress={calculatePremium}
+            style={{
+              backgroundColor: "#6366F1",
+              paddingVertical: 18,
+              borderRadius: 22,
+              alignItems: "center",
+              marginTop: 24,
+              shadowColor: "#6366F1",
+              shadowOpacity: 0.4,
+              shadowRadius: 12,
+            }}
+          >
+            <Text style={{
+              color: "#fff",
+              fontWeight: "700"
+            }}>
+              {t.update}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+        {/* 👉 ADD BELOW THIS LINE (SECOND BUTTON) */}
+
+<Animated.View style={buttonStyle}>
+  <TouchableOpacity
+    onPressIn={() => (buttonScale.value = withTiming(0.96))}
+    onPressOut={() => (buttonScale.value = withTiming(1))}
+    onPress={simulateEvent}
+    style={{
+      marginTop: 12,
+      paddingVertical: 16,
+      borderRadius: 20,
+      alignItems: "center",
+
+      // Premium secondary style
+      backgroundColor: "rgba(255,255,255,0.04)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.1)",
+    }}
+  >
+    <Text style={{
+      color: "#94A3B8",
+      fontWeight: "600"
+    }}>
+      {t.trigger}
+    </Text>
+  </TouchableOpacity>
+</Animated.View>
+
+        {/* ANALYTICS */}
+        <Text style={{
+          color: "#94A3B8",
+          marginTop: 26,
+          marginBottom: 8
+        }}>
+          ANALYTICS
+        </Text>
+
+        {/* LINE CHART */}
+        <Animated.View entering={FadeInDown.delay(300)}>
+          <View style={{
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderRadius: 22,
+            padding: 18
+          }}>
+            <LineChart
+              data={{
+                labels: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+                datasets: [{ data: [200, 450, 300, 600, 500] }],
+              }}
+              width={screenWidth - 64}
+              height={200}
+              yAxisSuffix="₹"
+              chartConfig={{
+                backgroundGradientFrom: "#020617",
+                backgroundGradientTo: "#020617",
+                color: (opacity = 1) => `rgba(99,102,241, ${opacity})`,
+                labelColor: () => "#94A3B8",
+                strokeWidth: 3,
+              }}
+              bezier
+            />
+          </View>
+        </Animated.View>
+
+        {/* PIE CHART */}
+        <Animated.View entering={FadeInDown.delay(400)}>
+          <View style={{
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderRadius: 22,
+            padding: 18,
+            marginTop: 22,
+            marginBottom: 40
+          }}>
+            <PieChart
+              data={[
+                {
+                  name: "Protected",
+                  population: claim ? 70 : 40,
+                  color: "#6366F1",
+                  legendFontColor: "#94A3B8",
+                  legendFontSize: 12,
+                },
+                {
+                  name: "Risk",
+                  population: claim ? 30 : 60,
+                  color: "#EF4444",
+                  legendFontColor: "#94A3B8",
+                  legendFontSize: 12,
+                },
+              ]}
+              width={screenWidth - 50}
+              height={200}
+              accessor="population"
+              backgroundColor="transparent"
+              chartConfig={{
+                color: () => "#fff",
+              }}
+              paddingLeft="12"
+              absolute
+            />
+          </View>
+        </Animated.View>
+
+      </Animated.View>
+    </ScrollView>
   );
 }
